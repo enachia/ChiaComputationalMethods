@@ -1,74 +1,107 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+import imageio.v2 as imageio    # Use imageio v2 for compatibility with imageio-ffmpeg
+import seaborn as sns
 
-# Parameters
-num_steps = 100  # Number of steps in each simulation
-num_simulations = 1000  # Number of simulations for Monte Carlo
-
-# Function to perform a random walk
-def random_walk(num_steps):
-    x, y = [0], [0]  # Starting point
-    for _ in range(num_steps):
-        angle = np.random.uniform(0, 2*np.pi)
-        x.append(x[-1] + np.cos(angle))
-        y.append(y[-1] + np.sin(angle))
+# Function to perform the random walk
+def drunkards_walk(steps=1000):
+    # Have the drunkard start at the origin
+    x = [0]
+    y = [0]
+    
+    for _ in range(steps):
+        direction = np.random.choice(['up', 'down', 'left', 'right'])
+        
+        if direction == 'up':
+            x.append(x[-1])
+            y.append(y[-1] + 1)
+        elif direction == 'down':
+            x.append(x[-1])
+            y.append(y[-1] - 1)
+        elif direction == 'left':
+            x.append(x[-1] - 1)
+            y.append(y[-1])
+        elif direction == 'right':
+            x.append(x[-1] + 1)
+            y.append(y[-1])
+            
     return x, y
 
-# Perform simulation
-end_positions = []
-for _ in range(num_simulations):
-    x, y = random_walk(num_steps)
-    end_positions.append((x[-1], y[-1]))
+# Generate frames and save as images
+def create_frames(steps=1000, interval=20):
+    x, y = drunkards_walk(steps)
+    filenames = [] # Store the filenames of the saved images
 
-# Convert to numpy array 
-end_positions = np.array(end_positions)
+     # Start from interval to avoid empty sequence
+    for i in range(interval, steps + 1, interval): 
+        plt.figure(figsize=(6, 6))
+        plt.plot(x[:i], y[:i], marker='o', color='violet', markersize=2, 
+                 linewidth=0.75, alpha=0.5)
+        plt.rcParams['axes.facecolor'] = 'silver' # Change background color
+        
+        # Set limits for x-axis and y-axis
+        plt.xlim(-25, 25) 
+        plt.ylim(-25, 25)
+        
+        plt.title(f'Drunkard\'s Walk: Step {i}')
+        filename = f'walk_{i}.png'
+        filenames.append(filename)
+        plt.savefig(filename)
+        plt.close()
+        
+    return filenames, x, y
 
-# Analyze the distribution of end positions
-mean_x, mean_y = np.mean(end_positions, axis=0)
-std_x, std_y = np.std(end_positions, axis=0)
+# Create GIF from the saved frames
+def create_gif(filenames, gif_name='drunkards_walk.gif'):
+    images = []
+    for filename in filenames:
+        images.append(imageio.imread(filename))
+    imageio.mimsave(gif_name, images, duration=0.2)
+    
+    # Clean up the image files
+    for filename in filenames:
+        os.remove(filename)
 
-print(f"Mean end position: ({mean_x}, {mean_y})")
-print(f"Standard deviation of end positions: ({std_x}, {std_y})")
+# Generate plot density
+def plot_density(x, y):
+    plt.figure(figsize=(8, 6))
+    sns.kdeplot(x=x, y=y, cmap="RdPu", bw_adjust=0.5, cbar=True, fill=True)
+    
+    # Set limits for x-axis and y-axis
+    plt.xlim(-25, 25)
+    plt.ylim(-25, 25)
 
-# Plotting a sample random walk and the distribution of end positions
-fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+    plt.title('Density Plot of Drunkard\'s Walk')
+    plt.xlabel('X Position')
+    plt.ylabel('Y Position')
+    density_plot_filename = 'density_plot.png'
+    plt.savefig(density_plot_filename)
+    plt.close()
 
-# Sample random walk
-x, y = random_walk(num_steps)
-ax[0].plot(x, y, marker='o')
-ax[0].set_title('Sample Random Walk')
-ax[0].set_xlim(min(x) - 1, max(x) + 1)
-ax[0].set_ylim(min(y) - 1, max(y) + 1)
+# Plot positions vs. steps
+def plot_positions_vs_steps(x, y):
+    steps = range(len(x)) # Number of steps taken
+    plt.figure(figsize=(10, 6))
+    plt.plot(steps, x, label='X Position')
+    plt.plot(steps, y, label='Y Position')
+    plt.plot(steps)
+    plt.xlabel('Steps')
+    plt.ylabel('Position')
+    plt.title('Position vs. Steps')
+    plt.legend()
+    positions_vs_steps_filename = 'positions_vs_steps.png'
+    plt.savefig(positions_vs_steps_filename)
+    plt.close()
 
-# Distribution of end positions
-ax[1].scatter(end_positions[:, 0], end_positions[:, 1], alpha=0.6)
-ax[1].set_title('Distribution of End Positions')
-ax[1].set_xlim(np.min(end_positions[:, 0]) - 1, np.max(end_positions[:, 0]) + 1)
-ax[1].set_ylim(np.min(end_positions[:, 1]) - 1, np.max(end_positions[:, 1]) + 1)
+# Generate the frames
+filenames, x, y = create_frames(steps=1000, interval=10)
 
-plt.show()
+# Create the GIF
+create_gif(filenames)
 
-# Create an animated GIF of a sample random walk
-fig, ax = plt.subplots()
-ax.set_xlim(min(x) - 1, max(x) + 1)
-ax.set_ylim(min(y) - 1, max(y) + 1)
-line, = ax.plot([], [], color='pink')
+# Create the density plot
+plot_density(x, y)
 
-particle = plt.Circle((0, 0), radius=0.075, fc='r')
-ax.add_patch(particle)
-
-def animate(i):
-    position = particle.center
-    x = plt.set_xlim(min(x) - 1, max(x) + 1)
-    y = ax.set_ylim(min(y) - 1, max(y) + 1)
-    line, = ax.plot([], [], color='pink')
-
-#def init():
-    #line.set_data([], [])
-    #return line,
-
-
-ani = FuncAnimation(fig, animate, frames=range(1, num_steps + 1), blit=True)
-
-plt.show()
+# Create the position vs. steps plot
+plot_positions_vs_steps(x, y)
