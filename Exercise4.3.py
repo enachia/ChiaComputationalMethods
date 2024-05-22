@@ -1,4 +1,7 @@
 
+# Exercise 4.3: Calculating derivatives
+
+
 # a)
 
 import numpy as np
@@ -27,7 +30,6 @@ for x in range(1, 11):
 
 
 # b)
-
 
 deltas = [10**-i for i in range(2, 15, 2)]
 
